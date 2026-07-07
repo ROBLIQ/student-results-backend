@@ -3,10 +3,12 @@ const { getGrade, getStatus } = require("../utils/grading");
 
 const studentSchema = new mongoose.Schema(
   {
-    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true },
-    matric: { type: String, trim: true, default: "" },
-    name:   { type: String, trim: true, default: "" },
-    // Eight exam question scores — their sum makes the Exam Total (capped at 70)
+    course:      { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true },
+    matric:      { type: String, trim: true, default: "" },
+    name:        { type: String, trim: true, default: "" },
+    department:  { type: String, trim: true, default: "" }, // e.g. Computer Science
+    programme:   { type: String, trim: true, default: "" }, // ND or HND
+    // Eight exam question scores — sum = Exam Total (capped at 70)
     q1: { type: Number, default: 0, min: 0 },
     q2: { type: Number, default: 0, min: 0 },
     q3: { type: Number, default: 0, min: 0 },

@@ -1,5 +1,5 @@
 const express = require("express");
-const Course = require("../models/Course");
+const Course  = require("../models/Course");
 const Student = require("../models/Student");
 const requireAuth = require("../middleware/auth");
 const { getGrade, getStatus } = require("../utils/grading");
@@ -7,7 +7,7 @@ const { getGrade, getStatus } = require("../utils/grading");
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/courses — list this lecturer's courses
+// GET /api/courses
 router.get("/", async (req, res) => {
   const courses = await Course.find({ lecturer: req.lecturerId }).sort({ createdAt: 1 });
   res.json(courses);
@@ -16,15 +16,29 @@ router.get("/", async (req, res) => {
 // POST /api/courses — add a course
 router.post("/", async (req, res) => {
   try {
-    const { code, title } = req.body;
+    const { code, title, level = "", semester = "", session = "" } = req.body;
     if (!code || !title) return res.status(400).json({ message: "Code and title are required" });
-    const course = await Course.create({ code, title, lecturer: req.lecturerId });
+    const course = await Course.create({ code, title, level, semester, session, lecturer: req.lecturerId });
     res.status(201).json(course);
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ message: "You already have a course with this code" });
     }
     res.status(500).json({ message: "Could not create course", error: err.message });
+  }
+});
+
+// PUT /api/courses/:id — update course details
+router.put("/:id", async (req, res) => {
+  try {
+    const course = await Course.findOne({ _id: req.params.id, lecturer: req.lecturerId });
+    if (!course) return res.status(404).json({ message: "Course not found" });
+    const fields = ["code", "title", "level", "semester", "session"];
+    fields.forEach((f) => { if (req.body[f] !== undefined) course[f] = req.body[f]; });
+    await course.save();
+    res.json(course);
+  } catch (err) {
+    res.status(500).json({ message: "Could not update course", error: err.message });
   }
 });
 
@@ -48,10 +62,9 @@ router.get("/:id/summary", async (req, res) => {
   let fail = 0;
 
   students.forEach((s) => {
-    const total = s.test + s.assignment + s.attendance + s.exam;
-    const grade = getGrade(total);
+    const grade = getGrade(s.grandTotal);
     gradeCounts[grade] += 1;
-    if (getStatus(total) === "PASS") pass += 1;
+    if (getStatus(s.grandTotal) === "PASS") pass += 1;
     else fail += 1;
   });
 

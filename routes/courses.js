@@ -51,7 +51,7 @@ router.delete("/:id", async (req, res) => {
   res.json({ message: "Course deleted" });
 });
 
-// GET /api/courses/:id/summary — pass/fail counts and grade distribution
+// GET /api/courses/:id/summary — full result analysis
 router.get("/:id/summary", async (req, res) => {
   const course = await Course.findOne({ _id: req.params.id, lecturer: req.lecturerId });
   if (!course) return res.status(404).json({ message: "Course not found" });
@@ -60,15 +60,46 @@ router.get("/:id/summary", async (req, res) => {
   const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
   let pass = 0;
   let fail = 0;
+  let sat  = 0;
+  const failedStudents = [];
 
   students.forEach((s) => {
-    const grade = getGrade(s.grandTotal);
+    const examTotal  = Math.min(70, s.q1+s.q2+s.q3+s.q4+s.q5+s.q6+s.q7+s.q8);
+    const grandTotal = Math.min(100, examTotal + s.ca);
+    const grade  = getGrade(grandTotal);
+    const status = getStatus(grandTotal);
+
+    if (examTotal > 0) sat += 1;
     gradeCounts[grade] += 1;
-    if (getStatus(s.grandTotal) === "PASS") pass += 1;
-    else fail += 1;
+
+    if (status === "PASS") {
+      pass += 1;
+    } else {
+      fail += 1;
+      failedStudents.push({
+        matric: s.matric,
+        name: s.name,
+        department: s.department,
+        programme: s.programme,
+        examTotal,
+        ca: s.ca,
+        grandTotal,
+        grade,
+      });
+    }
   });
 
-  res.json({ totalStudents: students.length, pass, fail, gradeCounts });
+  const passRate = students.length > 0 ? Math.round((pass / students.length) * 100) : 0;
+
+  res.json({
+    totalStudents: students.length,
+    totalSat: sat,
+    pass,
+    fail,
+    passRate,
+    gradeCounts,
+    failedStudents,
+  });
 });
 
 module.exports = router;

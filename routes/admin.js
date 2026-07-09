@@ -246,4 +246,29 @@ router.get("/failed-students", requireAdmin, async (req, res) => {
   }
 });
 
+// DELETE /api/admin/lecturers/:id — remove a lecturer + all their courses and students
+router.delete("/lecturers/:id", requireAdmin, async (req, res) => {
+  try {
+    const lecturer = await Lecturer.findById(req.params.id);
+    if (!lecturer) return res.status(404).json({ message: "Lecturer not found" });
+
+    // Get all their courses
+    const courses = await Course.find({ lecturer: lecturer._id });
+    const courseIds = courses.map((c) => c._id);
+
+    // Delete all students in those courses
+    if (courseIds.length) await Student.deleteMany({ course: { $in: courseIds } });
+
+    // Delete all courses
+    await Course.deleteMany({ lecturer: lecturer._id });
+
+    // Delete the lecturer
+    await lecturer.deleteOne();
+
+    res.json({ message: `Lecturer ${lecturer.name} and all their data deleted.` });
+  } catch (err) {
+    res.status(500).json({ message: "Delete failed", error: err.message });
+  }
+});
+
 module.exports = router;

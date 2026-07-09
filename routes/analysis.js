@@ -88,4 +88,65 @@ router.get("/carryover", async (req, res) => {
   }
 });
 
+// GET /api/analysis/search?q=&department=&programme=&level=
+// Searches across ALL courses for this lecturer
+router.get("/search", async (req, res) => {
+  try {
+    const { q = "", department = "", programme = "", level = "" } = req.query;
+    if (!q && !department && !programme && !level) {
+      return res.json({ results: [] });
+    }
+
+    const courseQuery = { lecturer: req.lecturerId };
+    if (level) courseQuery.level = level;
+    const courses = await Course.find(courseQuery);
+    if (!courses.length) return res.json({ results: [] });
+
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    const studentQuery = { course: { $in: courses.map((c) => c._id) } };
+    if (department) studentQuery.department = new RegExp(department, "i");
+    if (programme)  studentQuery.programme  = new RegExp(programme, "i");
+    if (q) {
+      studentQuery.$or = [
+        { name:   new RegExp(q, "i") },
+        { matric: new RegExp(q, "i") },
+      ];
+    }
+
+    const students = await Student.find(studentQuery).limit(200);
+
+    const results = students.map((s) => {
+      const course   = courseMap[s.course.toString()];
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const gt = Math.min(100, et + (s.ca||0));
+      return {
+        _id:        s._id,
+        matric:     s.matric,
+        name:       s.name,
+        department: s.department,
+        programme:  s.programme,
+        examTotal:  et,
+        ca:         s.ca,
+        grandTotal: gt,
+        grade:      getGrade(gt),
+        status:     getStatus(gt),
+        course: {
+          _id:      course?._id,
+          code:     course?.code,
+          title:    course?.title,
+          level:    course?.level,
+          semester: course?.semester,
+          session:  course?.session,
+        },
+      };
+    });
+
+    res.json({ results });
+  } catch (err) {
+    res.status(500).json({ message: "Search failed", error: err.message });
+  }
+});
+
 module.exports = router;

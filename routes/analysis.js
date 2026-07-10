@@ -149,4 +149,91 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// GET /api/analysis/level-summary
+// Returns statistics grouped by level for the logged-in lecturer
+router.get("/level-summary", async (req, res) => {
+  try {
+    const courses = await Course.find({ lecturer: req.lecturerId });
+    if (!courses.length) return res.json({ byLevel: {} });
+
+    const LEVEL_ORDER = ["ND I", "ND II", "HND I", "HND II"];
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    const courseIds = courses.map((c) => c._id);
+    const students  = await Student.find({ course: { $in: courseIds } });
+
+    // Build per-course stats first
+    const courseStats = {};
+    courses.forEach((c) => {
+      courseStats[c._id.toString()] = {
+        code: c.code, title: c.title,
+        level: c.level || "Unspecified",
+        semester: c.semester, session: c.session,
+        students: 0, passed: 0, failed: 0,
+      };
+    });
+
+    // Track carry-over: matric -> set of levels where they failed
+    const carryoverByLevel = {};
+
+    students.forEach((s) => {
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const gt = Math.min(100, et + (s.ca||0));
+      const status = getStatus(gt);
+      const cs = courseStats[s.course.toString()];
+      if (!cs) return;
+      cs.students += 1;
+      if (status === "PASS") cs.passed += 1;
+      else {
+        cs.failed += 1;
+        // Track carry-over by level
+        const lvl = cs.level;
+        if (!carryoverByLevel[lvl]) carryoverByLevel[lvl] = new Set();
+        carryoverByLevel[lvl].add((s.matric || "").trim() || s._id.toString());
+      }
+    });
+
+    // Group by level
+    const byLevel = {};
+    Object.values(courseStats).forEach((cs) => {
+      const lvl = cs.level || "Unspecified";
+      if (!byLevel[lvl]) {
+        byLevel[lvl] = {
+          level: lvl,
+          totalCourses: 0, totalRegistrations: 0,
+          passed: 0, failed: 0, courses: [],
+        };
+      }
+      const lvlData = byLevel[lvl];
+      lvlData.totalCourses      += 1;
+      lvlData.totalRegistrations += cs.students;
+      lvlData.passed             += cs.passed;
+      lvlData.failed             += cs.failed;
+      cs.passRate = cs.students > 0 ? Math.round((cs.passed / cs.students) * 100) : 0;
+      lvlData.courses.push(cs);
+    });
+
+    // Compute pass/fail rates and carry-over per level
+    Object.keys(byLevel).forEach((lvl) => {
+      const d = byLevel[lvl];
+      const total = d.passed + d.failed;
+      d.passRate      = total > 0 ? Math.round((d.passed / total) * 100) : 0;
+      d.failRate      = total > 0 ? Math.round((d.failed / total) * 100) : 0;
+      d.carryoverCount = carryoverByLevel[lvl]?.size || 0;
+      // Sort courses by code
+      d.courses.sort((a, b) => a.code.localeCompare(b.code));
+    });
+
+    // Return in standard level order
+    const ordered = {};
+    LEVEL_ORDER.forEach((lvl) => { if (byLevel[lvl]) ordered[lvl] = byLevel[lvl]; });
+    Object.keys(byLevel).forEach((lvl) => { if (!ordered[lvl]) ordered[lvl] = byLevel[lvl]; });
+
+    res.json({ byLevel: ordered });
+  } catch (err) {
+    res.status(500).json({ message: "Level summary failed", error: err.message });
+  }
+});
+
 module.exports = router;

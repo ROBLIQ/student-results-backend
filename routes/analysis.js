@@ -236,4 +236,114 @@ router.get("/level-summary", async (req, res) => {
   }
 });
 
+// ── Report Generation ────────────────────────────────────────
+// GET /api/analysis/report/options
+// Returns all unique semesters, sessions, departments for the filter dropdowns
+router.get("/report/options", async (req, res) => {
+  try {
+    const courses  = await Course.find({ lecturer: req.lecturerId });
+    const students = await Student.find({ course: { $in: courses.map((c) => c._id) } });
+
+    const semesters   = [...new Set(courses.map((c) => c.semester).filter(Boolean))].sort();
+    const sessions    = [...new Set(courses.map((c) => c.session).filter(Boolean))].sort();
+    const departments = [...new Set(students.map((s) => s.department).filter(Boolean))].sort();
+
+    res.json({ semesters, sessions, departments });
+  } catch (err) {
+    res.status(500).json({ message: "Options fetch failed", error: err.message });
+  }
+});
+
+// GET /api/analysis/report?type=semester|session|department&semester=&session=&department=
+router.get("/report", async (req, res) => {
+  try {
+    const { type, semester = "", session = "", department = "" } = req.query;
+    if (!type) return res.status(400).json({ message: "Report type is required" });
+
+    // Build course filter
+    const courseQuery = { lecturer: req.lecturerId };
+    if (semester)   courseQuery.semester = semester;
+    if (session)    courseQuery.session  = session;
+
+    const courses = await Course.find(courseQuery).sort({ code: 1 });
+    if (!courses.length) return res.json({ type, filters: { semester, session, department }, summary: null, courses: [] });
+
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    // Build student filter
+    const studentQuery = { course: { $in: courses.map((c) => c._id) } };
+    if (department) studentQuery.department = new RegExp(department, "i");
+
+    const students = await Student.find(studentQuery);
+
+    // Per-course stats
+    const courseStats = {};
+    courses.forEach((c) => {
+      courseStats[c._id.toString()] = {
+        _id: c._id, code: c.code, title: c.title,
+        level: c.level, semester: c.semester, session: c.session,
+        totalStudents: 0, passed: 0, failed: 0,
+        gradeCounts: { A:0, B:0, C:0, D:0, E:0, F:0 },
+        failedStudents: [],
+      };
+    });
+
+    const carryoverSet = new Set();
+
+    students.forEach((s) => {
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const gt = Math.min(100, et + (s.ca||0));
+      const grade  = getGrade(gt);
+      const status = getStatus(gt);
+      const cs = courseStats[s.course.toString()];
+      if (!cs) return;
+
+      cs.totalStudents += 1;
+      cs.gradeCounts[grade] += 1;
+      if (status === "PASS") {
+        cs.passed += 1;
+      } else {
+        cs.failed += 1;
+        carryoverSet.add((s.matric || "").trim() || s._id.toString());
+        cs.failedStudents.push({
+          matric: s.matric, name: s.name, department: s.department, programme: s.programme,
+          examTotal: et, ca: s.ca, grandTotal: gt, grade,
+        });
+      }
+    });
+
+    // Overall summary
+    let totalStudents = 0, totalPassed = 0, totalFailed = 0;
+    const overallGrades = { A:0, B:0, C:0, D:0, E:0, F:0 };
+
+    const courseList = Object.values(courseStats).map((cs) => {
+      cs.passRate = cs.totalStudents > 0 ? Math.round((cs.passed / cs.totalStudents) * 100) : 0;
+      totalStudents += cs.totalStudents;
+      totalPassed   += cs.passed;
+      totalFailed   += cs.failed;
+      Object.keys(cs.gradeCounts).forEach((g) => { overallGrades[g] += cs.gradeCounts[g]; });
+      return cs;
+    });
+
+    const overallPassRate = totalStudents > 0 ? Math.round((totalPassed / totalStudents) * 100) : 0;
+
+    res.json({
+      type,
+      filters: { semester, session, department },
+      summary: {
+        totalCourses:  courses.length,
+        totalStudents, totalPassed, totalFailed,
+        passRate: overallPassRate,
+        failRate: totalStudents > 0 ? Math.round((totalFailed / totalStudents) * 100) : 0,
+        carryoverCount: carryoverSet.size,
+        gradeCounts: overallGrades,
+      },
+      courses: courseList,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Report generation failed", error: err.message });
+  }
+});
+
 module.exports = router;

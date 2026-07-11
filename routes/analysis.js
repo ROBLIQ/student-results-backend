@@ -346,4 +346,119 @@ router.get("/report", async (req, res) => {
   }
 });
 
+// GET /api/analysis/statistics
+// Returns all performance data needed for the charts page
+router.get("/statistics", async (req, res) => {
+  try {
+    const courses = await Course.find({ lecturer: req.lecturerId });
+    if (!courses.length) return res.json({ empty: true });
+
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    const students = await Student.find({ course: { $in: courses.map((c) => c._id) } });
+
+    // Per-course stats
+    const courseStats = {};
+    courses.forEach((c) => {
+      courseStats[c._id.toString()] = {
+        code: c.code, title: c.title, level: c.level||"", semester: c.semester||"", session: c.session||"",
+        students: 0, passed: 0, failed: 0,
+        gradeCounts: { A:0, B:0, C:0, D:0, E:0, F:0 },
+      };
+    });
+
+    // Per-department stats
+    const deptStats = {};
+    // Per-level stats
+    const levelStats = {};
+    // Overall grade counts
+    const overallGrades = { A:0, B:0, C:0, D:0, E:0, F:0 };
+    let totalPass = 0, totalFail = 0;
+    // Carry-over per level
+    const carryoverByLevel = {};
+
+    students.forEach((s) => {
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const gt = Math.min(100, et + (s.ca||0));
+      const grade  = getGrade(gt);
+      const status = getStatus(gt);
+      const cs     = courseStats[s.course.toString()];
+      const course = courseMap[s.course.toString()];
+      if (!cs) return;
+
+      // Course stats
+      cs.students += 1;
+      cs.gradeCounts[grade] += 1;
+      if (status === "PASS") { cs.passed += 1; totalPass += 1; }
+      else                   { cs.failed += 1; totalFail += 1; }
+
+      // Overall grades
+      overallGrades[grade] += 1;
+
+      // Department stats
+      const dept = (s.department||"Unspecified").trim()||"Unspecified";
+      if (!deptStats[dept]) deptStats[dept] = { department:dept, passed:0, failed:0 };
+      if (status === "PASS") deptStats[dept].passed += 1;
+      else                   deptStats[dept].failed += 1;
+
+      // Level stats
+      const lvl = course?.level||"Unspecified";
+      if (!levelStats[lvl]) levelStats[lvl] = { level:lvl, passed:0, failed:0 };
+      if (status === "PASS") levelStats[lvl].passed += 1;
+      else {
+        levelStats[lvl].failed += 1;
+        if (!carryoverByLevel[lvl]) carryoverByLevel[lvl] = new Set();
+        carryoverByLevel[lvl].add((s.matric||"").trim()||s._id.toString());
+      }
+    });
+
+    // Finalize course stats
+    const courseList = Object.values(courseStats).map((cs) => ({
+      ...cs,
+      passRate: cs.students > 0 ? Math.round((cs.passed / cs.students) * 100) : 0,
+      failRate: cs.students > 0 ? Math.round((cs.failed / cs.students) * 100) : 0,
+    })).sort((a, b) => b.students - a.students);
+
+    // Finalize dept stats
+    const deptList = Object.values(deptStats).map((d) => {
+      const total = d.passed + d.failed;
+      return { ...d, total, passRate: total>0?Math.round((d.passed/total)*100):0, failRate: total>0?Math.round((d.failed/total)*100):0 };
+    }).sort((a, b) => b.total - a.total);
+
+    // Finalize level stats
+    const LEVEL_ORDER = ["ND I","ND II","HND I","HND II","Unspecified"];
+    const levelList = LEVEL_ORDER
+      .filter(lvl => levelStats[lvl])
+      .map((lvl) => {
+        const d = levelStats[lvl];
+        const total = d.passed + d.failed;
+        return { level:lvl, passed:d.passed, failed:d.failed, total,
+          passRate: total>0?Math.round((d.passed/total)*100):0,
+          failRate: total>0?Math.round((d.failed/total)*100):0,
+          carryover: carryoverByLevel[lvl]?.size||0,
+        };
+      });
+
+    const totalStudents = totalPass + totalFail;
+    const overallPassRate = totalStudents > 0 ? Math.round((totalPass / totalStudents) * 100) : 0;
+
+    res.json({
+      empty: false,
+      overall: {
+        totalCourses: courses.length,
+        totalStudents, totalPass, totalFail,
+        passRate: overallPassRate,
+        failRate: totalStudents>0?Math.round((totalFail/totalStudents)*100):0,
+        gradeCounts: overallGrades,
+      },
+      courses:     courseList,
+      departments: deptList,
+      levels:      levelList,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Statistics failed", error: err.message });
+  }
+});
+
 module.exports = router;

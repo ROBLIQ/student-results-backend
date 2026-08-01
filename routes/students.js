@@ -6,8 +6,7 @@ const requireAuth = require("../middleware/auth");
 const router = express.Router();
 router.use(requireAuth);
 
-const SCORE_FIELDS = ["matric", "name", "department", "programme",
-                      "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "ca"];
+const SCORE_FIELDS = ["matric", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "ca"];
 
 function clamp(v, max) { return Math.max(0, Math.min(max, Number(v) || 0)); }
 
@@ -27,11 +26,9 @@ router.get("/course/:courseId", async (req, res) => {
 router.post("/course/:courseId", async (req, res) => {
   const course = await getOwnedCourse(req.params.courseId, req.lecturerId);
   if (!course) return res.status(404).json({ message: "Course not found" });
-  const { matric="", name="", department="", programme="",
-          q1=0,q2=0,q3=0,q4=0,q5=0,q6=0,q7=0,q8=0,ca=0 } = req.body;
+  const { matric="", q1=0,q2=0,q3=0,q4=0,q5=0,q6=0,q7=0,q8=0,ca=0 } = req.body;
   const student = await Student.create({
-    course: course._id, matric, name, department, programme,
-    q1, q2, q3, q4, q5, q6, q7, q8, ca
+    course: course._id, matric, q1, q2, q3, q4, q5, q6, q7, q8, ca
   });
   res.status(201).json(student);
 });
@@ -70,13 +67,9 @@ router.post("/course/:courseId/bulk", async (req, res) => {
 
   rows.forEach((row) => {
     const matric = (row.matric || "").trim();
-    const name   = (row.name   || "").trim();
-    if (!matric || !name) { skipped += 1; return; }
+    if (!matric) { skipped += 1; return; }
     toInsert.push({
-      course: course._id,
-      matric, name,
-      department: (row.department || "").trim(),
-      programme:  (row.programme  || "").trim(),
+      course: course._id, matric,
       q1: clamp(row.q1, 999), q2: clamp(row.q2, 999),
       q3: clamp(row.q3, 999), q4: clamp(row.q4, 999),
       q5: clamp(row.q5, 999), q6: clamp(row.q6, 999),

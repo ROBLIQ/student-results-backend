@@ -218,13 +218,9 @@ router.get("/failed-students", requireAdmin, async (req, res) => {
         const course = courseMap[s.course.toString()];
         failed.push({
           matric:     s.matric,
-          name:       s.name,
-          department: s.department,
-          programme:  s.programme,
           examTotal:  et,
           ca:         s.ca,
           grandTotal: gt,
-          grade:      getGrade(gt),
           course: {
             code:     course?.code,
             title:    course?.title,

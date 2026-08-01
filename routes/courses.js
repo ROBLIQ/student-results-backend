@@ -77,14 +77,10 @@ router.get("/:id/summary", async (req, res) => {
     } else {
       fail += 1;
       failedStudents.push({
-        matric: s.matric,
-        name: s.name,
-        department: s.department,
-        programme: s.programme,
+        matric:     s.matric,
         examTotal,
-        ca: s.ca,
+        ca:         s.ca,
         grandTotal,
-        grade,
       });
     }
   });

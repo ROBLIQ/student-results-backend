@@ -36,23 +36,17 @@ router.get("/carryover", async (req, res) => {
 
         if (!carryoverMap[key]) {
           carryoverMap[key] = {
-            matric:      s.matric     || "",
-            name:        s.name       || "",
-            department:  s.department || "",
-            programme:   s.programme  || "",
-            level:       course?.level || "Unspecified",
+            matric:        s.matric || "",
+            level:         course?.level || "Unspecified",
             coursesFailed: [],
           };
         }
         carryoverMap[key].coursesFailed.push({
           code:       course?.code  || "",
           title:      course?.title || "",
-          semester:   course?.semester || "",
-          session:    course?.session  || "",
           examTotal:  et,
           ca:         s.ca || 0,
           grandTotal: gt,
-          grade:      getGrade(gt),
         });
       }
     });
@@ -124,13 +118,9 @@ router.get("/search", async (req, res) => {
       return {
         _id:        s._id,
         matric:     s.matric,
-        name:       s.name,
-        department: s.department,
-        programme:  s.programme,
         examTotal:  et,
         ca:         s.ca,
         grandTotal: gt,
-        grade:      getGrade(gt),
         status:     getStatus(gt),
         course: {
           _id:      course?._id,
@@ -307,8 +297,10 @@ router.get("/report", async (req, res) => {
         cs.failed += 1;
         carryoverSet.add((s.matric || "").trim() || s._id.toString());
         cs.failedStudents.push({
-          matric: s.matric, name: s.name, department: s.department, programme: s.programme,
-          examTotal: et, ca: s.ca, grandTotal: gt, grade,
+          matric:     s.matric,
+          examTotal:  et,
+          ca:         s.ca,
+          grandTotal: gt,
         });
       }
     });

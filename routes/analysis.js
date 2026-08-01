@@ -61,9 +61,9 @@ router.get("/carryover", async (req, res) => {
       byLevel[level].push(student);
     });
 
-    // Sort each level's students alphabetically by name
+    // Sort each level's students by matric number
     Object.keys(byLevel).forEach((level) => {
-      byLevel[level].sort((a, b) => a.name.localeCompare(b.name));
+      byLevel[level].sort((a, b) => (a.matric || "").localeCompare(b.matric || ""));
     });
 
     // Build ordered result

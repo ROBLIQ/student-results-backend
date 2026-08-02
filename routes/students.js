@@ -6,7 +6,7 @@ const requireAuth = require("../middleware/auth");
 const router = express.Router();
 router.use(requireAuth);
 
-const SCORE_FIELDS = ["matric", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "ca"];
+const SCORE_FIELDS = ["matric", "q1","q2","q3","q4","q5","q6","q7","q8","q9","ca"];
 
 function clamp(v, max) { return Math.max(0, Math.min(max, Number(v) || 0)); }
 
@@ -14,7 +14,6 @@ async function getOwnedCourse(courseId, lecturerId) {
   return Course.findOne({ _id: courseId, lecturer: lecturerId });
 }
 
-// GET /api/students/course/:courseId
 router.get("/course/:courseId", async (req, res) => {
   const course = await getOwnedCourse(req.params.courseId, req.lecturerId);
   if (!course) return res.status(404).json({ message: "Course not found" });
@@ -22,18 +21,16 @@ router.get("/course/:courseId", async (req, res) => {
   res.json(students);
 });
 
-// POST /api/students/course/:courseId — add a single student
 router.post("/course/:courseId", async (req, res) => {
   const course = await getOwnedCourse(req.params.courseId, req.lecturerId);
   if (!course) return res.status(404).json({ message: "Course not found" });
-  const { matric="", q1=0,q2=0,q3=0,q4=0,q5=0,q6=0,q7=0,q8=0,ca=0 } = req.body;
+  const { matric="", q1=0,q2=0,q3=0,q4=0,q5=0,q6=0,q7=0,q8=0,q9=0,ca=0 } = req.body;
   const student = await Student.create({
-    course: course._id, matric, q1, q2, q3, q4, q5, q6, q7, q8, ca
+    course: course._id, matric, q1,q2,q3,q4,q5,q6,q7,q8,q9,ca
   });
   res.status(201).json(student);
 });
 
-// PUT /api/students/:id — update any field
 router.put("/:id", async (req, res) => {
   const student = await Student.findById(req.params.id).populate("course");
   if (!student || String(student.course.lecturer) !== req.lecturerId) {
@@ -46,7 +43,6 @@ router.put("/:id", async (req, res) => {
   res.json(student);
 });
 
-// DELETE /api/students/:id
 router.delete("/:id", async (req, res) => {
   const student = await Student.findById(req.params.id).populate("course");
   if (!student || String(student.course.lecturer) !== req.lecturerId) {
@@ -56,7 +52,6 @@ router.delete("/:id", async (req, res) => {
   res.json({ message: "Student deleted" });
 });
 
-// POST /api/students/course/:courseId/bulk — CSV import
 router.post("/course/:courseId/bulk", async (req, res) => {
   const course = await getOwnedCourse(req.params.courseId, req.lecturerId);
   if (!course) return res.status(404).json({ message: "Course not found" });
@@ -68,12 +63,18 @@ router.post("/course/:courseId/bulk", async (req, res) => {
   rows.forEach((row) => {
     const matric = (row.matric || "").trim();
     if (!matric) { skipped += 1; return; }
+    // Accept both qu1-qu9 and q1-q9 column names in CSV
     toInsert.push({
       course: course._id, matric,
-      q1: clamp(row.q1, 999), q2: clamp(row.q2, 999),
-      q3: clamp(row.q3, 999), q4: clamp(row.q4, 999),
-      q5: clamp(row.q5, 999), q6: clamp(row.q6, 999),
-      q7: clamp(row.q7, 999), q8: clamp(row.q8, 999),
+      q1: clamp(row.qu1 ?? row.q1, 999),
+      q2: clamp(row.qu2 ?? row.q2, 999),
+      q3: clamp(row.qu3 ?? row.q3, 999),
+      q4: clamp(row.qu4 ?? row.q4, 999),
+      q5: clamp(row.qu5 ?? row.q5, 999),
+      q6: clamp(row.qu6 ?? row.q6, 999),
+      q7: clamp(row.qu7 ?? row.q7, 999),
+      q8: clamp(row.qu8 ?? row.q8, 999),
+      q9: clamp(row.qu9 ?? row.q9, 999),
       ca: clamp(row.ca, 30),
     });
   });

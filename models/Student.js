@@ -3,12 +3,9 @@ const { getGrade, getStatus } = require("../utils/grading");
 
 const studentSchema = new mongoose.Schema(
   {
-    course:      { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true },
-    matric:      { type: String, trim: true, default: "" },
-    name:        { type: String, trim: true, default: "" },
-    department:  { type: String, trim: true, default: "" }, // e.g. Computer Science
-    programme:   { type: String, trim: true, default: "" }, // ND or HND
-    // Eight exam question scores — sum = Exam Total (capped at 70)
+    course:  { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true },
+    matric:  { type: String, trim: true, default: "" },
+    // Nine exam question scores — sum = Exam Total (capped at 70)
     q1: { type: Number, default: 0, min: 0 },
     q2: { type: Number, default: 0, min: 0 },
     q3: { type: Number, default: 0, min: 0 },
@@ -17,6 +14,7 @@ const studentSchema = new mongoose.Schema(
     q6: { type: Number, default: 0, min: 0 },
     q7: { type: Number, default: 0, min: 0 },
     q8: { type: Number, default: 0, min: 0 },
+    q9: { type: Number, default: 0, min: 0 },
     // Continuous Assessment — out of 30
     ca: { type: Number, default: 0, min: 0, max: 30 },
   },
@@ -28,7 +26,7 @@ const studentSchema = new mongoose.Schema(
 );
 
 studentSchema.virtual("examTotal").get(function () {
-  return Math.min(70, this.q1 + this.q2 + this.q3 + this.q4 + this.q5 + this.q6 + this.q7 + this.q8);
+  return Math.min(70, this.q1+this.q2+this.q3+this.q4+this.q5+this.q6+this.q7+this.q8+this.q9);
 });
 
 studentSchema.virtual("grandTotal").get(function () {

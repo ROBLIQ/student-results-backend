@@ -113,7 +113,7 @@ router.get("/search", async (req, res) => {
 
     const results = students.map((s) => {
       const course   = courseMap[s.course.toString()];
-      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt = Math.min(100, et + (s.ca||0));
       return {
         _id:        s._id,
@@ -168,7 +168,7 @@ router.get("/level-summary", async (req, res) => {
     const carryoverByLevel = {};
 
     students.forEach((s) => {
-      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt = Math.min(100, et + (s.ca||0));
       const status = getStatus(gt);
       const cs = courseStats[s.course.toString()];
@@ -282,7 +282,7 @@ router.get("/report", async (req, res) => {
     const carryoverSet = new Set();
 
     students.forEach((s) => {
-      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt = Math.min(100, et + (s.ca||0));
       const grade  = getGrade(gt);
       const status = getStatus(gt);
@@ -371,7 +371,7 @@ router.get("/statistics", async (req, res) => {
     const carryoverByLevel = {};
 
     students.forEach((s) => {
-      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt = Math.min(100, et + (s.ca||0));
       const grade  = getGrade(gt);
       const status = getStatus(gt);

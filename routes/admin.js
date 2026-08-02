@@ -76,7 +76,7 @@ router.get("/overview", requireAdmin, async (req, res) => {
     const gradeCounts = { A:0, B:0, C:0, D:0, E:0, F:0 };
 
     students.forEach((s) => {
-      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt = Math.min(100, et + (s.ca||0));
       const grade = getGrade(gt);
       gradeCounts[grade] += 1;
@@ -110,7 +110,7 @@ router.get("/lecturers", requireAdmin, async (req, res) => {
 
       let pass = 0, fail = 0;
       students.forEach((s) => {
-        const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+        const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
         const gt = Math.min(100, et + (s.ca||0));
         if (getStatus(gt) === "PASS") pass += 1;
         else fail += 1;
@@ -142,7 +142,7 @@ router.get("/lecturers/:id/courses", requireAdmin, async (req, res) => {
       const students = await Student.find({ course: c._id });
       let pass = 0, fail = 0;
       students.forEach((s) => {
-        const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+        const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
         const gt = Math.min(100, et + (s.ca||0));
         if (getStatus(gt) === "PASS") pass += 1;
         else fail += 1;
@@ -169,7 +169,7 @@ router.get("/departments", requireAdmin, async (req, res) => {
 
     students.forEach((s) => {
       const dept = (s.department || "Unspecified").trim() || "Unspecified";
-      const et   = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et   = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt   = Math.min(100, et + (s.ca||0));
       const st   = getStatus(gt);
 
@@ -212,7 +212,7 @@ router.get("/failed-students", requireAdmin, async (req, res) => {
     const failed   = [];
 
     students.forEach((s) => {
-      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0));
+      const et = Math.min(70,(s.q1||0)+(s.q2||0)+(s.q3||0)+(s.q4||0)+(s.q5||0)+(s.q6||0)+(s.q7||0)+(s.q8||0)+(s.q9||0));
       const gt = Math.min(100, et + (s.ca||0));
       if (getStatus(gt) === "FAIL") {
         const course = courseMap[s.course.toString()];

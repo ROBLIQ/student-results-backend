@@ -64,7 +64,7 @@ router.get("/:id/summary", async (req, res) => {
   const failedStudents = [];
 
   students.forEach((s) => {
-    const examTotal  = Math.min(70, s.q1+s.q2+s.q3+s.q4+s.q5+s.q6+s.q7+s.q8);
+    const examTotal  = Math.min(70, s.q1+s.q2+s.q3+s.q4+s.q5+s.q6+s.q7+s.q8+(s.q9||0));
     const grandTotal = Math.min(100, examTotal + s.ca);
     const grade  = getGrade(grandTotal);
     const status = getStatus(grandTotal);

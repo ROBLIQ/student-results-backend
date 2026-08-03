@@ -61,21 +61,21 @@ router.post("/course/:courseId/bulk", async (req, res) => {
   let skipped = 0;
 
   rows.forEach((row) => {
-    const matric = (row.matric || "").trim();
+    // Accept MATRICNO or matric column name; SN column is ignored automatically
+    const matric = (row.MATRICNO || row.matricno || row.matric || "").toString().trim();
     if (!matric) { skipped += 1; return; }
-    // Accept both qu1-qu9 and q1-q9 column names in CSV
     toInsert.push({
       course: course._id, matric,
-      q1: clamp(row.qu1 ?? row.q1, 999),
-      q2: clamp(row.qu2 ?? row.q2, 999),
-      q3: clamp(row.qu3 ?? row.q3, 999),
-      q4: clamp(row.qu4 ?? row.q4, 999),
-      q5: clamp(row.qu5 ?? row.q5, 999),
-      q6: clamp(row.qu6 ?? row.q6, 999),
-      q7: clamp(row.qu7 ?? row.q7, 999),
-      q8: clamp(row.qu8 ?? row.q8, 999),
-      q9: clamp(row.qu9 ?? row.q9, 999),
-      ca: clamp(row.ca, 30),
+      q1: clamp(row.QU1 ?? row.qu1 ?? row.q1, 999),
+      q2: clamp(row.QU2 ?? row.qu2 ?? row.q2, 999),
+      q3: clamp(row.QU3 ?? row.qu3 ?? row.q3, 999),
+      q4: clamp(row.QU4 ?? row.qu4 ?? row.q4, 999),
+      q5: clamp(row.QU5 ?? row.qu5 ?? row.q5, 999),
+      q6: clamp(row.QU6 ?? row.qu6 ?? row.q6, 999),
+      q7: clamp(row.QU7 ?? row.qu7 ?? row.q7, 999),
+      q8: clamp(row.QU8 ?? row.qu8 ?? row.q8, 999),
+      q9: clamp(row.QU9 ?? row.qu9 ?? row.q9, 999),
+      ca: clamp(row.T_CA ?? row.t_ca ?? row.ca, 30),
     });
   });
 
